@@ -1,6 +1,6 @@
 # Trabalho Extensionista | CPA
 
-#### Gustavo Losch, Henrique Mayer e Rian Codoni
+#### Gustavo Losch, Henrique Mayer e Rian Cordoni
 Trabalho extensionista para a disciplina de Coleta, Preparação e Análise de Dados utilizando os dados abertos do MEC, INEP e FNDE
 
 ---
