@@ -1,0 +1,6 @@
+outs:
+- md5: b633fe5ee9943c934f902d48e9eb14aa.dir
+  size: 3252201274
+  nfiles: 51
+  hash: md5
+  path: MICRODADOS_SAEB_2023
