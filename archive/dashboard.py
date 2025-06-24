@@ -3,16 +3,32 @@ import plotly.express as px
 import pandas as pd
 import json
 
-df = pd.read_csv("datasets/merged/2ef_merged.csv")
-indicadores = ["PROFICIENCIA_MT", "PROFICIENCIA_LP",
-               "IN_INTERNET", "IN_BIBLIOTECA", "QT_DESKTOP_ALUNO"]
+# --- Load geojson
 geojson = json.load(open('geojson/brasil_estados.json'))
 
+# --- Função para carregar dataset por ano
+def load_data(ano):
+    return pd.read_csv(f"datasets/merged/{ano}_merged.csv")
+
+# --- Iniciar app
 app = Dash()
 
+# --- Lista de indicadores e anos
+indicadores = ["PROFICIENCIA_MT", "PROFICIENCIA_LP", "IN_INTERNET", "IN_BIBLIOTECA", "QT_DESKTOP_ALUNO"]
+anos = {"2º Ano": "2ef", "5º Ano": "5ef", "9º Ano": "9ef"}
+
+# --- Layout
 app.layout = html.Div([
-    html.H1("Impacto da Infraestrutura no Desempenho Escolar",
-            style={"textAlign": "center"}),
+    html.H1("Impacto da Infraestrutura no Desempenho Escolar", style={"textAlign": "center"}),
+
+    html.Div([
+        html.Label("Ano Escolar:"),
+        dcc.Dropdown(
+            options=[{"label": k, "value": v} for k, v in anos.items()],
+            value="2ef",
+            id='ano-dropdown'
+        )
+    ], style={"width": "40%", "margin": "auto"}),
 
     html.Div([
         html.Label("Indicador no Mapa:"),
@@ -21,37 +37,53 @@ app.layout = html.Div([
             value='PROFICIENCIA_MT',
             id='indicador-dropdown'
         ),
-    ], style={"width": "40%", "margin": "auto"}),
+    ], style={"width": "40%", "margin": "auto", "marginTop": "20px"}),
 
     html.Div([
         html.Div([
             html.H3("Mapa Interativo:", style={"textAlign": "center"}),
-            dcc.Graph(id='choropleth-map', style={'height': '650px'})], style={'width': '57%', 'display': 'inline-block', 'verticalAlign': 'top'}),
+            dcc.Graph(id='choropleth-map', style={'height': '600px'})], 
+            style={'width': '55%', 'display': 'inline-block'}),
 
-        html.Div(id='kpi-cards', style={'width': '28%',
-                 'display': 'inline-block', 'paddingLeft': '2%'})
-    ], style={'padding': '20px'})
+        html.Div(id='kpi-cards', style={'width': '40%', 'display': 'inline-block', 'paddingLeft': '2%'})
+    ], style={'padding': '20px'}),
+
+    html.H3("Correlação entre Equipamentos e Proficiência", style={"textAlign": "center", "marginTop": "40px"}),
+    dcc.Dropdown(
+        id='equipamento-dropdown',
+        options=[
+            {"label": "Escolas com Internet", "value": "IN_INTERNET"},
+            {"label": "Escolas com Biblioteca", "value": "IN_BIBLIOTECA"},
+            {"label": "Desktops por aluno", "value": "QT_DESKTOP_ALUNO"}
+        ],
+        value="IN_INTERNET",
+        style={"width": "40%", "margin": "auto"}
+    ),
+    dcc.Graph(id='scatter-plot')
 ])
 
-
+# --- Callbacks
 @callback(
     Output('choropleth-map', 'figure'),
+    Input('ano-dropdown', 'value'),
     Input('indicador-dropdown', 'value')
 )
-def update_map(indicador):
-    fig = px.choropleth(df, geojson=geojson,
-                        locations='UF_NOME',
-                        color=indicador,
-                        color_continuous_scale="matter",
-                        hover_data="UF_NOME",
-                        scope='south america'
-                        )
+def update_map(ano, indicador):
+    df = load_data(ano)
+    fig = px.choropleth(
+        df,
+        geojson=geojson,
+        locations='UF_NOME',
+        color=indicador,
+        color_continuous_scale="matter",
+        hover_data=["UF_NOME"],
+        scope='south america'
+    )
     fig.update_geos(
-        center={"lat": -19.2350, "lon": -52.9253},
-        projection_scale=1.7,
+        center={"lat": -27.5, "lon": -51.5},
+        projection_scale=4,
         visible=False
     )
-    fig.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0})
     fig.update_layout(
         coloraxis_colorbar=dict(
             title=indicador,
@@ -62,16 +94,15 @@ def update_map(indicador):
         ),
         margin={"r": 0, "t": 0, "l": 0, "b": 0}
     )
-
     return fig
-
 
 @callback(
     Output('kpi-cards', 'children'),
-    Input('indicador-dropdown', 'value'),
+    Input('ano-dropdown', 'value'),
     Input('choropleth-map', 'clickData')
 )
-def update_kpis(indicador, clickData):
+def update_kpis(ano, clickData):
+    df = load_data(ano)
     if clickData:
         estado = clickData['points'][0]['location']
         df_filtrado = df[df['UF_NOME'] == estado]
@@ -87,9 +118,8 @@ def update_kpis(indicador, clickData):
 
     def kpi_block(title, value, suffix=""):
         return html.Div([
-            html.H4(title, style={'marginBottom': '5px'}),
-            html.Div(f"{value:.2f}{suffix}", style={
-                     'fontSize': '22px', 'fontWeight': 'bold'})
+            html.H4(title),
+            html.Div(f"{value:.2f}{suffix}", style={'fontSize': '22px', 'fontWeight': 'bold'})
         ], style={
             'border': '1px solid lightgray',
             'borderRadius': '10px',
@@ -106,6 +136,24 @@ def update_kpis(indicador, clickData):
         kpi_block("Escolas com Biblioteca", perc_biblioteca, "%"),
     ]
 
+@callback(
+    Output('scatter-plot', 'figure'),
+    Input('ano-dropdown', 'value'),
+    Input('equipamento-dropdown', 'value')
+)
+def update_scatter(ano, equipamento):
+    df = load_data(ano)
+    fig = px.scatter(
+        df,
+        x=equipamento,
+        y="PROFICIENCIA_MT",
+        trendline="ols",
+        hover_name="UF_NOME",
+        labels={equipamento: equipamento, "PROFICIENCIA_MT": "Proficiência em Matemática"}
+    )
+    fig.update_layout(height=500)
+    return fig
 
+# --- Run
 if __name__ == '__main__':
     app.run(debug=True)
