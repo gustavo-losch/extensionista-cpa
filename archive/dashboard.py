@@ -40,13 +40,30 @@ app.layout = html.Div([
     ], style={"width": "40%", "margin": "auto", "marginTop": "20px"}),
 
     html.Div([
-        html.Div([
-            html.H3("Mapa Interativo:", style={"textAlign": "center"}),
-            dcc.Graph(id='choropleth-map', style={'height': '600px'})], 
-            style={'width': '55%', 'display': 'inline-block'}),
+    html.Div([
+        html.H3("Mapa Interativo:", style={"textAlign": "center"}),
+        dcc.Graph(id='choropleth-map', style={'height': '600px'})
+    ], style={
+        'width': '60%',
+        'display': 'inline-block',
+        'verticalAlign': 'top',
+        'boxSizing': 'border-box',
+        'paddingRight': '1%'
+    }),
 
-        html.Div(id='kpi-cards', style={'width': '40%', 'display': 'inline-block', 'paddingLeft': '2%'})
-    ], style={'padding': '20px'}),
+    html.Div(id='kpi-cards', style={
+        'width': '38%',
+        'display': 'inline-block',
+        'verticalAlign': 'top',
+        'boxSizing': 'border-box'
+    })
+], style={
+    'padding': '20px',
+    'display': 'flex',
+    'flexWrap': 'nowrap',
+    'justifyContent': 'space-between'
+}),
+
 
     html.H3("Correlação entre Equipamentos e Proficiência", style={"textAlign": "center", "marginTop": "40px"}),
     dcc.Dropdown(
