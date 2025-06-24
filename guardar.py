@@ -3,19 +3,21 @@ import plotly.express as px
 import pandas as pd
 import json
 
-# Load geojson
+# --- Load geojson
 geojson = json.load(open('geojson/brasil_estados.json'))
 
-# Function to load dataset by grade
+# --- Função para carregar dataset por ano
 def load_data(ano):
     return pd.read_csv(f"datasets/merged/{ano}_merged.csv")
 
+# --- Iniciar app
 app = Dash()
 
-# Indicators and grade levels
+# --- Lista de indicadores e anos
 indicadores = ["PROFICIENCIA_MT", "PROFICIENCIA_LP", "IN_INTERNET", "IN_BIBLIOTECA", "QT_DESKTOP_ALUNO"]
 anos = {"2º Ano": "2ef", "5º Ano": "5ef", "9º Ano": "9ef"}
 
+# --- Layout
 app.layout = html.Div([
     html.H1("Impacto da Infraestrutura no Desempenho Escolar", style={"textAlign": "center"}),
 
@@ -38,27 +40,30 @@ app.layout = html.Div([
     ], style={"width": "40%", "margin": "auto", "marginTop": "20px"}),
 
     html.Div([
-        html.Div([
-            html.H3("Mapa Interativo:", style={"textAlign": "center"}),
-            dcc.Graph(id='choropleth-map', style={'height': '600px'})
-        ], style={
-            'width': '60%',
-            'display': 'inline-block',
-            'verticalAlign': 'top',
-            'paddingRight': '1%'
-        }),
-
-        html.Div(id='kpi-cards', style={
-            'width': '38%',
-            'display': 'inline-block',
-            'verticalAlign': 'top'
-        })
+    html.Div([
+        html.H3("Mapa Interativo:", style={"textAlign": "center"}),
+        dcc.Graph(id='choropleth-map', style={'height': '600px'})
     ], style={
-        'padding': '20px',
-        'display': 'flex',
-        'flexWrap': 'nowrap',
-        'justifyContent': 'space-between'
+        'width': '60%',
+        'display': 'inline-block',
+        'verticalAlign': 'top',
+        'boxSizing': 'border-box',
+        'paddingRight': '1%'
     }),
+
+    html.Div(id='kpi-cards', style={
+        'width': '38%',
+        'display': 'inline-block',
+        'verticalAlign': 'top',
+        'boxSizing': 'border-box'
+    })
+], style={
+    'padding': '20px',
+    'display': 'flex',
+    'flexWrap': 'nowrap',
+    'justifyContent': 'space-between'
+}),
+
 
     html.H3("Correlação entre Equipamentos e Proficiência", style={"textAlign": "center", "marginTop": "40px"}),
     dcc.Dropdown(
@@ -71,30 +76,15 @@ app.layout = html.Div([
             {"label": "Escolas com Laboratório de Informática", "value": "IN_LABORATORIO_INFORMATICA"},
             {"label": "Escolas com Lousa Digital", "value": "IN_EQUIP_LOUSA_DIGITAL"},
             {"label": "Escolas com Desktop", "value": "IN_DESKTOP_ALUNO"},
-            {"label": "Escolas com Notebook", "value": "IN_COMP_PORTATIL_ALUNO"}
+            {"label": "Escolas com Notebook", "value": "IN_COMP_PORTATIL_ALUNO"},
         ],
         value="IN_INTERNET",
         style={"width": "40%", "margin": "auto"}
     ),
-    dcc.Graph(id='scatter-plot'),
-
-    html.H3("Comparativo entre Estados Selecionados", style={"textAlign": "center", "marginTop": "40px"}),
-
-    html.Div([
-        dcc.Dropdown(
-            id='estados-dropdown',
-            multi=True,
-            placeholder="Selecione os estados...",
-            style={"width": "60%", "margin": "auto"}
-        )
-    ]),
-    dcc.Graph(id='bar-estados'),
-
-    html.H3("Correlação entre Indicadores (Heatmap)", style={"textAlign": "center", "marginTop": "40px"}),
-    dcc.Graph(id='heatmap-corr')
+    dcc.Graph(id='scatter-plot')
 ])
 
-# Choropleth Map
+# --- Callbacks
 @callback(
     Output('choropleth-map', 'figure'),
     Input('ano-dropdown', 'value'),
@@ -128,7 +118,6 @@ def update_map(ano, indicador):
     )
     return fig
 
-# KPI Cards
 @callback(
     Output('kpi-cards', 'children'),
     Input('ano-dropdown', 'value'),
@@ -169,7 +158,6 @@ def update_kpis(ano, clickData):
         kpi_block("Escolas com Biblioteca", perc_biblioteca, "%"),
     ]
 
-# Scatter plot com linha de tendência
 @callback(
     Output('scatter-plot', 'figure'),
     Input('ano-dropdown', 'value'),
@@ -177,61 +165,17 @@ def update_kpis(ano, clickData):
 )
 def update_scatter(ano, equipamento):
     df = load_data(ano)
-    grouped = df.groupby("UF_NOME").agg({
-        equipamento: "mean",
-        "PROFICIENCIA_MT": "mean"
-    }).reset_index()
     fig = px.scatter(
-        grouped,
+        df,
         x=equipamento,
         y="PROFICIENCIA_MT",
-        text="UF_NOME",
         trendline="ols",
+        hover_name="UF_NOME",
         labels={equipamento: equipamento, "PROFICIENCIA_MT": "Proficiência em Matemática"}
     )
-    fig.update_traces(textposition="top center")
     fig.update_layout(height=500)
     return fig
 
-# Gráfico de barras para estados selecionados
-@callback(
-    Output('bar-estados', 'figure'),
-    Output('estados-dropdown', 'options'),
-    Input('ano-dropdown', 'value'),
-    Input('estados-dropdown', 'value')
-)
-def update_bar_estados(ano, estados_selecionados):
-    df = load_data(ano)
-    estados_disponiveis = sorted(df["UF_NOME"].unique())
-    opcoes = [{"label": estado, "value": estado} for estado in estados_disponiveis]
-
-    if not estados_selecionados:
-        return px.bar(title="Selecione estados para comparar"), opcoes
-
-    df_filtrado = df[df["UF_NOME"].isin(estados_selecionados)]
-    grouped = df_filtrado.groupby("UF_NOME")[["PROFICIENCIA_MT", "IN_INTERNET", "IN_BIBLIOTECA", "QT_DESKTOP_ALUNO"]].mean().reset_index()
-
-    fig = px.bar(
-        grouped.melt(id_vars="UF_NOME", var_name="Indicador", value_name="Valor"),
-        x="UF_NOME",
-        y="Valor",
-        color="Indicador",
-        barmode="group"
-    )
-    fig.update_layout(height=500)
-    return fig, opcoes
-
-# Heatmap de correlação
-@callback(
-    Output('heatmap-corr', 'figure'),
-    Input('ano-dropdown', 'value')
-)
-def update_heatmap(ano):
-    df = load_data(ano)
-    corr = df[indicadores].corr()
-    fig = px.imshow(corr, text_auto=True, color_continuous_scale="RdBu", zmin=-1, zmax=1)
-    fig.update_layout(height=500)
-    return fig
-
+# --- Run
 if __name__ == '__main__':
     app.run(debug=True)
