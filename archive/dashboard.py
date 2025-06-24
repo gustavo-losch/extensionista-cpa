@@ -71,7 +71,9 @@ app.layout = html.Div([
         options=[
             {"label": "Escolas com Internet", "value": "IN_INTERNET"},
             {"label": "Escolas com Biblioteca", "value": "IN_BIBLIOTECA"},
-            {"label": "Desktops por aluno", "value": "QT_DESKTOP_ALUNO"}
+            {"label": "Escolas com Computador", "value": "IN_COMPUTADOR"},
+            {"label": "Escolas com Laboratório de Ciências", "value": "IN_LABORATORIO_CIENCIAS"},
+            {"label": "Escolas com Laboratório de Informática", "value": "IN_LABORATORIO_INFORMATICA"},
         ],
         value="IN_INTERNET",
         style={"width": "40%", "margin": "auto"}
