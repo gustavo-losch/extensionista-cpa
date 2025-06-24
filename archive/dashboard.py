@@ -11,9 +11,8 @@ def load_data(ano):
     return pd.read_csv(f"datasets/merged/{ano}_merged.csv")
 
 app = Dash()
-
 # Indicators and grade levels
-indicadores = ["PROFICIENCIA_MT", "PROFICIENCIA_LP", "IN_INTERNET", "IN_BIBLIOTECA", "QT_DESKTOP_ALUNO"]
+indicadores = ["PROFICIENCIA_MT", "PROFICIENCIA_LP", "IN_LABORATORIO_INFORMATICA", "QT_DESKTOP_ALUNO",  "QT_EQUIP_TV", "IN_EQUIP_LOUSA_DIGITAL", "QT_EQUIP_MULTIMIDIA", "QT_DESKTOP_ALUNO","QT_COMP_PORTATIL_ALUNO"]
 anos = {"2º Ano": "2ef", "5º Ano": "5ef", "9º Ano": "9ef"}
 
 app.layout = html.Div([
@@ -209,7 +208,7 @@ def update_bar_estados(ano, estados_selecionados):
         return px.bar(title="Selecione estados para comparar"), opcoes
 
     df_filtrado = df[df["UF_NOME"].isin(estados_selecionados)]
-    grouped = df_filtrado.groupby("UF_NOME")[["PROFICIENCIA_MT", "IN_INTERNET", "IN_BIBLIOTECA", "QT_DESKTOP_ALUNO"]].mean().reset_index()
+    grouped = df_filtrado.groupby("UF_NOME")[["PROFICIENCIA_MT", "IN_INTERNET", "PROFICIENCIA_LP", "QT_DESKTOP_ALUNO"]].mean().reset_index()
 
     fig = px.bar(
         grouped.melt(id_vars="UF_NOME", var_name="Indicador", value_name="Valor"),
@@ -222,13 +221,14 @@ def update_bar_estados(ano, estados_selecionados):
     return fig, opcoes
 
 # Heatmap de correlação
+indicadores_heat = ["PROFICIENCIA_MT", "PROFICIENCIA_LP", "IN_INTERNET", "IN_LABORATORIO_INFORMATICA","IN_COMPUTADOR", "IN_EQUIP_IMPRESSORA"]
 @callback(
     Output('heatmap-corr', 'figure'),
     Input('ano-dropdown', 'value')
 )
 def update_heatmap(ano):
     df = load_data(ano)
-    corr = df[indicadores].corr()
+    corr = df[indicadores_heat].corr()
     fig = px.imshow(corr, text_auto=True, color_continuous_scale="RdBu", zmin=-1, zmax=1)
     fig.update_layout(height=500)
     return fig
