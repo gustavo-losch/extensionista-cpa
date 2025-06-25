@@ -5,13 +5,8 @@ Trabalho extensionista para a disciplina de Coleta, Preparação e Análise de D
 
 
 ## Questão de Pesquisa 
-Qual a relação entre a existência de equipamentos tecnológicos e o desempenho em matemática dos alunos do 2º, 5º e 9º ano do Ensino Fundamental nos estados da região sul em 2023?
+Existe associação entre a presença de equipamentos tecnológicos nas escolas e o desempenho dos alunos no 2º, 5º e 9º ano do Ensino Fundamental nos estados do Brasil em 2023?
 
-### Sobre o Trabalho
-Objetivos Específicos:
-- {texto}
-- {texto}
-- {texto}
 
 #### Quando: 
 Serão realizadas duas apresentações parciais e uma apresentação final do trabalho.
