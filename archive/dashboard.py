@@ -18,7 +18,7 @@ anos = {"2º Ano": "2ef", "5º Ano": "5ef", "9º Ano": "9ef"}
 app.layout = html.Div([
     html.H1("Impacto da Infraestrutura no Desempenho Escolar", style={"textAlign": "center"}),
 
-    # Dropdowns lado a lado
+    # Dropdowns
     html.Div([
         html.Div([
             html.Label("Ano Escolar:"),
@@ -27,7 +27,7 @@ app.layout = html.Div([
                 value="9ef",
                 id='ano-dropdown'
             )
-        ], style={"width": "48%", "marginRight": "2%"}),
+        ], style={"width": "30%", "marginRight": "2%"}),
 
         html.Div([
             html.Label("Indicador no Mapa:"),
@@ -36,16 +36,30 @@ app.layout = html.Div([
                 value='PROFICIENCIA_MT',
                 id='indicador-dropdown'
             ),
-        ], style={"width": "48%"})
+        ], style={"width": "30%", "marginRight": "2%"}),
+
+        html.Div([
+            html.Label("Dependência Administrativa:"),
+            dcc.Dropdown(
+                options=[
+                    {"label": "Todas", "value": "Todas"},
+                    {"label": "Pública", "value": "Publica"},
+                    {"label": "Privada", "value": "Privada"}
+                ],
+                value="Todas",
+                id='dependencia-dropdown',
+                placeholder="Filtrar por dependência..."
+            )
+        ], style={"width": "30%"})
     ], style={
         "display": "flex",
         "justifyContent": "center",
         "alignItems": "flex-end",
-        "width": "80%",
+        "width": "90%",
         "margin": "0 auto 20px auto"
     }),
 
-    # Mapa e KPIs lado a lado
+    # Mapa e KPIs
     html.Div([
         html.Div([
             html.H3("Mapa Interativo:", style={"textAlign": "center"}),
@@ -69,8 +83,7 @@ app.layout = html.Div([
         'justifyContent': 'space-between'
     }),
 
-    # Dropdown de equipamento
-    html.H4("Atributo a ser comparado", style={"textAlign": "left", "marginTop": "40px"}),
+    html.H4("Atributo a ser comparado", style={"textAlign": "center", "marginTop": "40px"}),
 
     dcc.Dropdown(
         id='equipamento-dropdown',
@@ -88,7 +101,6 @@ app.layout = html.Div([
         style={"width": "40%", "margin": "auto"}
     ),
 
-    # Scatter plot e heatmap lado a lado
     html.Div([
         html.Div([
             html.H4("Infraestrutura vs Proficiência", style={"textAlign": "center"}),
@@ -107,7 +119,6 @@ app.layout = html.Div([
         'marginTop': '40px'
     }),
 
-    # Comparativo entre estados
     html.H3("Comparativo entre Estados Selecionados", style={"textAlign": "center", "marginTop": "40px"}),
 
     html.Div([
@@ -123,15 +134,19 @@ app.layout = html.Div([
     dcc.Graph(id='bar-estados')
 ])
 
+# ==== CALLBACKS ====
 
-# Choropleth Map
 @callback(
     Output('choropleth-map', 'figure'),
     Input('ano-dropdown', 'value'),
-    Input('indicador-dropdown', 'value')
+    Input('indicador-dropdown', 'value'),
+    Input('dependencia-dropdown', 'value')
 )
-def update_map(ano, indicador):
+def update_map(ano, indicador, dependencia):
     df = load_data(ano)
+    if dependencia != "Todas":
+        df = df[df['DEPENDENCIA_NOME'] == dependencia]
+
     fig = px.choropleth(
         df,
         geojson=geojson,
@@ -141,149 +156,97 @@ def update_map(ano, indicador):
         hover_data=["UF_NOME"],
         scope='south america'
     )
-    fig.update_geos(
-        center={"lat": -19.2350, "lon": -52.9253},
-        projection_scale=1.7,
-        visible=False
-    )
-    fig.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0})
-    fig.update_layout(
-        coloraxis_colorbar=dict(
-            title=indicador,
-            len=0.5,
-            thickness=10,
-            xanchor='left',
-            x=0.85
-        ),
-        margin={"r": 0, "t": 0, "l": 0, "b": 0}
-    )
+    fig.update_geos(center={"lat": -19.2350, "lon": -52.9253}, projection_scale=1.7, visible=False)
+    fig.update_layout(margin={"r":0,"t":0,"l":0,"b":0}, coloraxis_colorbar=dict(title=indicador, len=0.5, thickness=10, x=0.85))
     return fig
 
-# KPI Cards
 @callback(
     Output('kpi-cards', 'children'),
     Input('ano-dropdown', 'value'),
-    Input('choropleth-map', 'clickData')
+    Input('choropleth-map', 'clickData'),
+    Input('dependencia-dropdown', 'value')
 )
-def update_kpis(ano, clickData):
+def update_kpis(ano, clickData, dependencia):
     df = load_data(ano)
+    if dependencia != "Todas":
+        df = df[df['DEPENDENCIA_NOME'] == dependencia]
+
     if clickData:
         estado = clickData['points'][0]['location']
         df_filtrado = df[df['UF_NOME'] == estado]
-        titulo = f"Indicadores de {estado}" 
+        titulo = f"Indicadores de {estado}"
     else:
         df_filtrado = df
         titulo = "Indicadores Nacionais"
-
-    prof_mt = df_filtrado["PROFICIENCIA_MT"].mean()
-    prof_lp = df_filtrado["PROFICIENCIA_LP"].mean()
-    perc_internet = df_filtrado["IN_INTERNET"].mean() * 100
-    perc_biblioteca = df_filtrado["IN_COMPUTADOR"].mean() * 100
 
     def kpi_block(title, value, suffix=""):
         return html.Div([
             html.H4(title),
             html.Div(f"{value:.2f}{suffix}", style={'fontSize': '22px', 'fontWeight': 'bold'})
-        ], style={
-            'border': '1px solid lightgray',
-            'borderRadius': '10px',
-            'padding': '15px',
-            'marginBottom': '15px',
-            'backgroundColor': '#f9f9f9'
-        })
+        ], style={'border': '1px solid lightgray', 'borderRadius': '10px', 'padding': '15px', 'marginBottom': '15px', 'backgroundColor': '#f9f9f9'})
 
     return [
         html.H3(titulo, style={"textAlign": "center"}),
-        kpi_block("Proficiência em Matemática", prof_mt),
-        kpi_block("Proficiência em Língua Portuguesa", prof_lp),
-        kpi_block("Escolas com Internet", perc_internet, "%"),
-        kpi_block("Escolas com Computador", perc_biblioteca, "%"),
+        kpi_block("Proficiência em Matemática", df_filtrado["PROFICIENCIA_MT"].mean()),
+        kpi_block("Proficiência em Língua Portuguesa", df_filtrado["PROFICIENCIA_LP"].mean()),
+        kpi_block("Escolas com Internet", df_filtrado["IN_INTERNET"].mean() * 100, "%"),
+        kpi_block("Escolas com Computador", df_filtrado["IN_COMPUTADOR"].mean() * 100, "%")
     ]
 
 @callback(
     Output('scatter-plot', 'figure'),
     Input('ano-dropdown', 'value'),
-    Input('equipamento-dropdown', 'value')
+    Input('equipamento-dropdown', 'value'),
+    Input('dependencia-dropdown', 'value')
 )
-def update_scatter(ano, equipamento):
+def update_scatter(ano, equipamento, dependencia):
     df = load_data(ano)
+    if dependencia != "Todas":
+        df = df[df['DEPENDENCIA_NOME'] == dependencia]
 
-    if equipamento not in df.columns or "PROFICIENCIA_MT" not in df.columns:
-        return px.scatter(title="Colunas não encontradas")
-
-    grouped = df.groupby("UF_NOME").agg({
-        equipamento: "mean",
-        "PROFICIENCIA_MT": "mean"
-    }).reset_index()
-
+    grouped = df.groupby("UF_NOME").agg({equipamento: "mean", "PROFICIENCIA_MT": "mean"}).reset_index()
     grouped = grouped.dropna(subset=[equipamento, "PROFICIENCIA_MT"])
+    return px.scatter(
+        grouped, x=equipamento, y="PROFICIENCIA_MT", color="PROFICIENCIA_MT",
+        color_continuous_scale="matter", text="UF_NOME", trendline="ols"
+    ).update_traces(textposition="top center").update_layout(height=500).update_coloraxes(showscale=False)
 
-    try:
-        fig = px.scatter(
-            grouped,
-            x=equipamento,
-            y="PROFICIENCIA_MT",
-            color="PROFICIENCIA_MT",
-            color_continuous_scale="matter",
-            text="UF_NOME",
-            trendline="ols",
-            labels={
-                equipamento: equipamento,
-                "PROFICIENCIA_MT": "Proficiência em Matemática"
-            }
-        )
-        fig.update_traces(textposition="top center")
-        fig.update_layout(height=500)
-        fig.update_coloraxes(showscale=False)
-    
-        return fig
-    
-    except Exception as e:
-        print("Erro no gráfico de dispersão:", e)
-        return px.scatter(title="Erro ao gerar gráfico")
-
-
-# Gráfico de barras para estados selecionados
 @callback(
     Output('bar-estados', 'figure'),
     Output('estados-dropdown', 'options'),
     Input('ano-dropdown', 'value'),
-    Input('estados-dropdown', 'value')
+    Input('estados-dropdown', 'value'),
+    Input('dependencia-dropdown', 'value')
 )
-def update_bar_estados(ano, estados_selecionados):
+def update_bar_estados(ano, estados_selecionados, dependencia):
     df = load_data(ano)
+    if dependencia != "Todas":
+        df = df[df['DEPENDENCIA_NOME'] == dependencia]
+
     estados_disponiveis = sorted(df["UF_NOME"].unique())
     opcoes = [{"label": estado, "value": estado} for estado in estados_disponiveis]
-
     if not estados_selecionados:
         return px.bar(), opcoes
-
     df_filtrado = df[df["UF_NOME"].isin(estados_selecionados)]
-    grouped = df_filtrado.groupby("UF_NOME")[["PROFICIENCIA_MT", "IN_INTERNET", "PROFICIENCIA_LP", "QT_DESKTOP_ALUNO", "IN_COMPUTADOR"]].mean().reset_index()
-
-    fig = px.bar(
-        grouped.melt(id_vars="UF_NOME", var_name="Indicador", value_name="Valor"),
-        x="UF_NOME",
-        y="Valor",
-        color="Indicador",
-        color_continuous_scale="matter",
-        barmode="group"
-    )
+    grouped = df_filtrado.groupby("UF_NOME")[["PROFICIENCIA_MT", "IN_INTERNET", "PROFICIENCIA_LP", "IN_DESKTOP_ALUNO", "IN_COMPUTADOR"]].mean().reset_index()
+    fig = px.bar(grouped.melt(id_vars="UF_NOME", var_name="Indicador", value_name="Valor"),
+                 x="UF_NOME", y="Valor", color="Indicador", barmode="group")
     fig.update_layout(height=500)
     return fig, opcoes
 
-# Heatmap de correlação
-indicadores_heat = ["PROFICIENCIA_MT", "PROFICIENCIA_LP", "IN_INTERNET", "IN_LABORATORIO_INFORMATICA","IN_COMPUTADOR", "IN_EQUIP_IMPRESSORA"]
 @callback(
     Output('heatmap-corr', 'figure'),
-    Input('ano-dropdown', 'value')
+    Input('ano-dropdown', 'value'),
+    Input('dependencia-dropdown', 'value')
 )
-def update_heatmap(ano):
+def update_heatmap(ano, dependencia):
+    indicadores_heat = ["PROFICIENCIA_MT", "PROFICIENCIA_LP", "IN_INTERNET", "IN_LABORATORIO_INFORMATICA","IN_COMPUTADOR", "IN_EQUIP_IMPRESSORA"]
     df = load_data(ano)
+    if dependencia != "Todas":
+        df = df[df['DEPENDENCIA_NOME'] == dependencia]
+
     corr = df[indicadores_heat].corr()
-    fig = px.imshow(corr, text_auto=True, color_continuous_scale="RdBu", zmin=-1, zmax=1)
-    fig.update_layout(height=500)
-    return fig
+    return px.imshow(corr, text_auto=True, color_continuous_scale="RdBu", zmin=-1, zmax=1).update_layout(height=500)
 
 if __name__ == '__main__':
     app.run(debug=True)
