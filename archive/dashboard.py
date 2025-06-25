@@ -18,24 +18,34 @@ anos = {"2º Ano": "2ef", "5º Ano": "5ef", "9º Ano": "9ef"}
 app.layout = html.Div([
     html.H1("Impacto da Infraestrutura no Desempenho Escolar", style={"textAlign": "center"}),
 
+    # Dropdowns lado a lado
     html.Div([
-        html.Label("Ano Escolar:"),
-        dcc.Dropdown(
-            options=[{"label": k, "value": v} for k, v in anos.items()],
-            value="2ef",
-            id='ano-dropdown'
-        )
-    ], style={"width": "40%", "margin": "auto"}),
+        html.Div([
+            html.Label("Ano Escolar:"),
+            dcc.Dropdown(
+                options=[{"label": k, "value": v} for k, v in anos.items()],
+                value="2ef",
+                id='ano-dropdown'
+            )
+        ], style={"width": "48%", "marginRight": "2%"}),
 
-    html.Div([
-        html.Label("Indicador no Mapa:"),
-        dcc.Dropdown(
-            indicadores,
-            value='PROFICIENCIA_MT',
-            id='indicador-dropdown'
-        ),
-    ], style={"width": "40%", "margin": "auto", "marginTop": "20px"}),
+        html.Div([
+            html.Label("Indicador no Mapa:"),
+            dcc.Dropdown(
+                indicadores,
+                value='PROFICIENCIA_MT',
+                id='indicador-dropdown'
+            ),
+        ], style={"width": "48%"})
+    ], style={
+        "display": "flex",
+        "justifyContent": "center",
+        "alignItems": "flex-end",
+        "width": "80%",
+        "margin": "0 auto 20px auto"
+    }),
 
+    # Mapa e KPIs lado a lado
     html.Div([
         html.Div([
             html.H3("Mapa Interativo:", style={"textAlign": "center"}),
@@ -59,7 +69,9 @@ app.layout = html.Div([
         'justifyContent': 'space-between'
     }),
 
+    # Dropdown de equipamento
     html.H3("Correlação entre Equipamentos e Proficiência", style={"textAlign": "center", "marginTop": "40px"}),
+
     dcc.Dropdown(
         id='equipamento-dropdown',
         options=[
@@ -75,8 +87,27 @@ app.layout = html.Div([
         value="IN_INTERNET",
         style={"width": "40%", "margin": "auto"}
     ),
-    dcc.Graph(id='scatter-plot'),
 
+    # Scatter plot e heatmap lado a lado
+    html.Div([
+        html.Div([
+            html.H4("Correlação Equipamento vs Proficiência", style={"textAlign": "center"}),
+            dcc.Graph(id='scatter-plot')
+        ], style={'width': '49%', 'display': 'inline-block', 'paddingRight': '1%'}),
+
+        html.Div([
+            html.H4("Correlação entre Indicadores (Heatmap)", style={"textAlign": "center"}),
+            dcc.Graph(id='heatmap-corr')
+        ], style={'width': '49%', 'display': 'inline-block'})
+    ], style={
+        'padding': '20px',
+        'display': 'flex',
+        'flexWrap': 'nowrap',
+        'justifyContent': 'space-between',
+        'marginTop': '40px'
+    }),
+
+    # Comparativo entre estados
     html.H3("Comparativo entre Estados Selecionados", style={"textAlign": "center", "marginTop": "40px"}),
 
     html.Div([
@@ -87,11 +118,10 @@ app.layout = html.Div([
             style={"width": "60%", "margin": "auto"}
         )
     ]),
-    dcc.Graph(id='bar-estados'),
-
-    html.H3("Correlação entre Indicadores (Heatmap)", style={"textAlign": "center", "marginTop": "40px"}),
-    dcc.Graph(id='heatmap-corr')
+    
+    dcc.Graph(id='bar-estados')
 ])
+
 
 # Choropleth Map
 @callback(
@@ -111,10 +141,11 @@ def update_map(ano, indicador):
         scope='south america'
     )
     fig.update_geos(
-        center={"lat": -27.5, "lon": -51.5},
-        projection_scale=4,
+        center={"lat": -19.2350, "lon": -52.9253},
+        projection_scale=1.7,
         visible=False
     )
+    fig.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0})
     fig.update_layout(
         coloraxis_colorbar=dict(
             title=indicador,
@@ -138,15 +169,15 @@ def update_kpis(ano, clickData):
     if clickData:
         estado = clickData['points'][0]['location']
         df_filtrado = df[df['UF_NOME'] == estado]
-        titulo = f"Indicadores de {estado}"
+        titulo = f"Indicadores de {estado}" 
     else:
         df_filtrado = df
         titulo = "Indicadores Nacionais"
 
-    prof_mt = df_filtrado["PROFICIENCIA_MT"].median()
-    prof_lp = df_filtrado["PROFICIENCIA_LP"].median()
+    prof_mt = df_filtrado["PROFICIENCIA_MT"].mean()
+    prof_lp = df_filtrado["PROFICIENCIA_LP"].mean()
     perc_internet = df_filtrado["IN_INTERNET"].mean() * 100
-    perc_biblioteca = df_filtrado["IN_BIBLIOTECA"].mean() * 100
+    perc_biblioteca = df_filtrado["IN_COMPUTADOR"].mean() * 100
 
     def kpi_block(title, value, suffix=""):
         return html.Div([
@@ -165,10 +196,9 @@ def update_kpis(ano, clickData):
         kpi_block("Proficiência em Matemática", prof_mt),
         kpi_block("Proficiência em Língua Portuguesa", prof_lp),
         kpi_block("Escolas com Internet", perc_internet, "%"),
-        kpi_block("Escolas com Biblioteca", perc_biblioteca, "%"),
+        kpi_block("Escolas com Computador", perc_biblioteca, "%"),
     ]
 
-# Scatter plot com linha de tendência
 @callback(
     Output('scatter-plot', 'figure'),
     Input('ano-dropdown', 'value'),
@@ -176,21 +206,33 @@ def update_kpis(ano, clickData):
 )
 def update_scatter(ano, equipamento):
     df = load_data(ano)
+
+    if equipamento not in df.columns or "PROFICIENCIA_MT" not in df.columns:
+        return px.scatter(title="Colunas não encontradas")
+
     grouped = df.groupby("UF_NOME").agg({
         equipamento: "mean",
         "PROFICIENCIA_MT": "mean"
     }).reset_index()
-    fig = px.scatter(
-        grouped,
-        x=equipamento,
-        y="PROFICIENCIA_MT",
-        text="UF_NOME",
-        trendline="ols",
-        labels={equipamento: equipamento, "PROFICIENCIA_MT": "Proficiência em Matemática"}
-    )
-    fig.update_traces(textposition="top center")
-    fig.update_layout(height=500)
-    return fig
+
+    grouped = grouped.dropna(subset=[equipamento, "PROFICIENCIA_MT"])
+
+    try:
+        fig = px.scatter(
+            grouped,
+            x=equipamento,
+            y="PROFICIENCIA_MT",
+            text="UF_NOME",
+            trendline="ols",
+            labels={equipamento: equipamento, "PROFICIENCIA_MT": "Proficiência em Matemática"}
+        )
+        fig.update_traces(textposition="top center")
+        fig.update_layout(height=500)
+        return fig
+    except Exception as e:
+        print("Erro no gráfico de dispersão:", e)
+        return px.scatter(title="Erro ao gerar gráfico")
+
 
 # Gráfico de barras para estados selecionados
 @callback(
