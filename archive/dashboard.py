@@ -12,7 +12,7 @@ def load_data(ano):
 
 app = Dash()
 # Indicators and grade levels
-indicadores = ["PROFICIENCIA_MT", "PROFICIENCIA_LP", "IN_LABORATORIO_INFORMATICA", "QT_DESKTOP_ALUNO",  "QT_EQUIP_TV", "IN_EQUIP_LOUSA_DIGITAL", "QT_EQUIP_MULTIMIDIA", "QT_DESKTOP_ALUNO","QT_COMP_PORTATIL_ALUNO"]
+indicadores = ["PROFICIENCIA_MT", "PROFICIENCIA_LP", "IN_LABORATORIO_INFORMATICA", "IN_COMPUTADOR", "QT_DESKTOP_ALUNO",  "QT_EQUIP_TV", "IN_EQUIP_LOUSA_DIGITAL", "QT_EQUIP_MULTIMIDIA", "QT_DESKTOP_ALUNO","QT_COMP_PORTATIL_ALUNO"]
 anos = {"2º Ano": "2ef", "5º Ano": "5ef", "9º Ano": "9ef"}
 
 app.layout = html.Div([
@@ -24,7 +24,7 @@ app.layout = html.Div([
             html.Label("Ano Escolar:"),
             dcc.Dropdown(
                 options=[{"label": k, "value": v} for k, v in anos.items()],
-                value="2ef",
+                value="9ef",
                 id='ano-dropdown'
             )
         ], style={"width": "48%", "marginRight": "2%"}),
@@ -70,7 +70,7 @@ app.layout = html.Div([
     }),
 
     # Dropdown de equipamento
-    html.H3("Correlação entre Equipamentos e Proficiência", style={"textAlign": "center", "marginTop": "40px"}),
+    html.H4("Atributo a ser comparado", style={"textAlign": "left", "marginTop": "40px"}),
 
     dcc.Dropdown(
         id='equipamento-dropdown',
@@ -91,12 +91,12 @@ app.layout = html.Div([
     # Scatter plot e heatmap lado a lado
     html.Div([
         html.Div([
-            html.H4("Correlação Equipamento vs Proficiência", style={"textAlign": "center"}),
+            html.H4("Infraestrutura vs Proficiência", style={"textAlign": "center"}),
             dcc.Graph(id='scatter-plot')
         ], style={'width': '49%', 'display': 'inline-block', 'paddingRight': '1%'}),
 
         html.Div([
-            html.H4("Correlação entre Indicadores (Heatmap)", style={"textAlign": "center"}),
+            html.H4("Correlação entre Indicadores", style={"textAlign": "center"}),
             dcc.Graph(id='heatmap-corr')
         ], style={'width': '49%', 'display': 'inline-block'})
     ], style={
@@ -115,6 +115,7 @@ app.layout = html.Div([
             id='estados-dropdown',
             multi=True,
             placeholder="Selecione os estados...",
+            value=["RS", "SP"],
             style={"width": "60%", "margin": "auto"}
         )
     ]),
@@ -222,13 +223,21 @@ def update_scatter(ano, equipamento):
             grouped,
             x=equipamento,
             y="PROFICIENCIA_MT",
+            color="PROFICIENCIA_MT",
+            color_continuous_scale="matter",
             text="UF_NOME",
             trendline="ols",
-            labels={equipamento: equipamento, "PROFICIENCIA_MT": "Proficiência em Matemática"}
+            labels={
+                equipamento: equipamento,
+                "PROFICIENCIA_MT": "Proficiência em Matemática"
+            }
         )
         fig.update_traces(textposition="top center")
         fig.update_layout(height=500)
+        fig.update_coloraxes(showscale=False)
+    
         return fig
+    
     except Exception as e:
         print("Erro no gráfico de dispersão:", e)
         return px.scatter(title="Erro ao gerar gráfico")
@@ -247,16 +256,17 @@ def update_bar_estados(ano, estados_selecionados):
     opcoes = [{"label": estado, "value": estado} for estado in estados_disponiveis]
 
     if not estados_selecionados:
-        return px.bar(title="Selecione estados para comparar"), opcoes
+        return px.bar(), opcoes
 
     df_filtrado = df[df["UF_NOME"].isin(estados_selecionados)]
-    grouped = df_filtrado.groupby("UF_NOME")[["PROFICIENCIA_MT", "IN_INTERNET", "PROFICIENCIA_LP", "QT_DESKTOP_ALUNO"]].mean().reset_index()
+    grouped = df_filtrado.groupby("UF_NOME")[["PROFICIENCIA_MT", "IN_INTERNET", "PROFICIENCIA_LP", "QT_DESKTOP_ALUNO", "IN_COMPUTADOR"]].mean().reset_index()
 
     fig = px.bar(
         grouped.melt(id_vars="UF_NOME", var_name="Indicador", value_name="Valor"),
         x="UF_NOME",
         y="Valor",
         color="Indicador",
+        color_continuous_scale="matter",
         barmode="group"
     )
     fig.update_layout(height=500)
