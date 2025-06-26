@@ -19,4 +19,27 @@ relatório parcial e apresentação descrevendo a fase de compreensão dos dados
 do relatório final e apresentação descrevendo a preparação dos dados e as análise explo-
 ratórias.
 
+---
+
+#### Instruções para a visualização do dashboard:
+
+- Crie um ambiente virtual com o Python na versão `3.10`:
+```shell
+conda create --name dashboard python=3.10
+conda activate dashboard
+```
+
+- Instale as bibliotecas necessárias para execução do dashboard:
+```shell
+pip install pandas plotly dash
+```
+
+- Execute o script `archive/dashboard.py`
+```shell
+python archive/dashboard.py
+```
+
+---
+
+
 Links dos datasets: [Microdados do INEP](https://www.gov.br/inep/pt-br/acesso-a-informacao/dados-abertos/microdados), [Dados Abertos MEC](https://dados.gov.br/dados/organizacoes/visualizar/ministerio-da-educacao), [Dados Abetos FNDE](https://dados.gov.br/dados/organizacoes/visualizar/fundo-nacional-de-desenvolvimento-da-educacao)
