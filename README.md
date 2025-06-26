@@ -31,13 +31,15 @@ conda activate dashboard
 
 - Instale as bibliotecas necessárias para execução do dashboard:
 ```shell
-pip install pandas plotly dash
+pip install pandas plotly dash statsmodels
 ```
 
 - Execute o script `archive/dashboard.py`
 ```shell
 python archive/dashboard.py
 ```
+
+- Acesse a página [localhost:8050](http://localhost:8050) em seu navegador.
 
 ---
 
